@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.channel;
 
+import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -158,7 +159,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
-		doPipeline(ch.pipeline());
+		doPipeline(ch);
 		ch.pipeline()
 		  .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
 		if (log.isDebugEnabled()) {
@@ -212,9 +213,9 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	}
 
 	/**
-	 * @param pipeline
+	 * @param channel
 	 */
-	protected abstract void doPipeline(ChannelPipeline pipeline);
+	protected abstract void doPipeline(Channel channel);
 
 	/**
 	 * Cleanly terminate a channel according to the current context handler type.
@@ -251,9 +252,9 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
+			InetSocketAddress remoteAddress,
 			ChannelPipeline pipeline) {
-		SslHandler sslHandler = secure ? options.getSslHandler(pipeline.channel()
-		                                                               .alloc()) : null;
+		SslHandler sslHandler = secure ? options.getSslHandler(pipeline.channel().alloc(), remoteAddress) : null;
 		if (sslHandler != null) {
 			if (log.isDebugEnabled()) {
 				log.debug("SSL enabled using engine {}",

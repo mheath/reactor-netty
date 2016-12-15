@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.channel;
 
+import java.net.InetSocketAddress;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
@@ -71,8 +72,11 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void doPipeline(ChannelPipeline pipeline) {
-		addSslAndLogHandlers(clientOptions, sink, loggingHandler, secure, pipeline);
+	protected void doPipeline(Channel channel) {
+		ChannelPipeline pipeline = channel.pipeline();
+		InetSocketAddress remoteAddress = channel.remoteAddress() instanceof InetSocketAddress ? (InetSocketAddress) channel.remoteAddress() : null;
+
+		addSslAndLogHandlers(clientOptions, sink, loggingHandler, secure, remoteAddress, pipeline);
 		addProxyHandler(clientOptions, pipeline);
 	}
 

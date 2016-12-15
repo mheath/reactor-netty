@@ -16,15 +16,8 @@
 
 package reactor.ipc.netty.options;
 
-import java.net.InetSocketAddress;
-import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
@@ -37,11 +30,20 @@ import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.NetUtil;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.net.InetSocketAddress;
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * A client connector builder with low-level connection options including connection pooling and
@@ -62,10 +64,11 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 
 	static void defaultClientOptions(Bootstrap bootstrap) {
 		bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-		         .option(ChannelOption.AUTO_READ, false)
-		         .option(ChannelOption.SO_RCVBUF, 1024 * 1024)
-		         .option(ChannelOption.SO_SNDBUF, 1024 * 1024);
+				.option(ChannelOption.AUTO_READ, false)
+				.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
+				.option(ChannelOption.SO_SNDBUF, 1024 * 1024);
 	}
+
 	/**
 	 * Client connection pool selector
 	 */
@@ -74,12 +77,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	/**
 	 * Proxy options
 	 */
-	String                                     proxyUsername;
+	String proxyUsername;
 	Function<? super String, ? extends String> proxyPassword;
-	Supplier<? extends InetSocketAddress>      proxyAddress;
-	Proxy                                      proxyType;
+	Supplier<? extends InetSocketAddress> proxyAddress;
+	Proxy proxyType;
 
-	InternetProtocolFamily                protocolFamily = null;
+	InternetProtocolFamily protocolFamily = null;
 	Supplier<? extends InetSocketAddress> connectAddress = null;
 
 	/**
@@ -107,7 +110,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 *
 	 * @param options the source options to duplicate
 	 */
-	protected ClientOptions(ClientOptions options){
+	protected ClientOptions(ClientOptions options) {
 		super(options);
 		this.proxyUsername = options.proxyUsername;
 		this.proxyPassword = options.proxyPassword;
@@ -122,7 +125,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * The localhost port to which this client should connect.
 	 *
 	 * @param port The port to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(int port) {
@@ -134,7 +136,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 *
 	 * @param host The host to connect to.
 	 * @param port The port to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(@Nonnull String host, int port) {
@@ -145,7 +146,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * The address to which this client should connect.
 	 *
 	 * @param connectAddress The address to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(@Nonnull InetSocketAddress connectAddress) {
@@ -156,7 +156,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * The address to which this client should connect.
 	 *
 	 * @param connectAddress The address to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
@@ -189,7 +188,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * {@link #connect(Supplier)} resolved.
 	 *
 	 * @param address an optional address
-	 *
 	 * @return a new {@link Bootstrap}
 	 */
 	public final Bootstrap get(InetSocketAddress address) {
@@ -197,19 +195,16 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		InetSocketAddress adr;
 		if (address != null) {
 			adr = address;
-		}
-		else if (connectAddress != null) {
+		} else if (connectAddress != null) {
 			adr = connectAddress.get();
-		}
-		else {
+		} else {
 			adr = null;
 		}
 
 		if (adr != null) {
 			if (useDatagramChannel()) {
 				b.localAddress(adr);
-			}
-			else {
+			} else {
 				b.remoteAddress(adr);
 			}
 		}
@@ -231,7 +226,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * Select a channel pool from the given address.
 	 *
 	 * @param address the optional address to use
-	 *
 	 * @return an eventual {@link ChannelPool}
 	 */
 	public final ChannelPool getPool(InetSocketAddress address) {
@@ -278,7 +272,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 *
 	 * @return the resolved address if any
 	 */
-	public final InetSocketAddress getRemoteAddress() {
+	public InetSocketAddress getRemoteAddress() {
 		return null != connectAddress ? connectAddress.get() : null;
 	}
 
@@ -287,8 +281,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * enable client connection-pooling.
 	 *
 	 * @param poolResources the {@link PoolResources} given
-	 * an {@link InetSocketAddress}
-	 *
+	 *                      an {@link InetSocketAddress}
 	 * @return {@code this}
 	 */
 	public ClientOptions poolResources(PoolResources poolResources) {
@@ -301,8 +294,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * Configures the version family for the socket.
 	 *
 	 * @param protocolFamily the version family for the socket, or null for the system
-	 * default family
-	 *
+	 *                       default family
 	 * @return {@code this}
 	 */
 	public ClientOptions protocolFamily(InternetProtocolFamily protocolFamily) {
@@ -316,14 +308,13 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 *
 	 * @param host The host to connect to.
 	 * @param port The port to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions proxy(@Nonnull Proxy type,
-			@Nonnull String host,
-			int port,
-			@Nullable String username,
-			@Nullable Function<? super String, ? extends String> password) {
+							   @Nonnull String host,
+							   int port,
+							   @Nullable String username,
+							   @Nullable Function<? super String, ? extends String> password) {
 		return proxy(type,
 				InetSocketAddress.createUnresolved(host, port),
 				username,
@@ -335,7 +326,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 *
 	 * @param host The host to connect to.
 	 * @param port The port to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions proxy(@Nonnull Proxy type, @Nonnull String host, int port) {
@@ -346,7 +336,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * The address to which this client should connect.
 	 *
 	 * @param connectAddress The address to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions proxy(@Nonnull Proxy type, @Nonnull InetSocketAddress connectAddress) {
@@ -357,13 +346,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * The address to which this client should connect.
 	 *
 	 * @param connectAddress The address to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions proxy(@Nonnull Proxy type,
-			@Nonnull InetSocketAddress connectAddress,
-			@Nullable String username,
-			@Nullable Function<? super String, ? extends String> password) {
+							   @Nonnull InetSocketAddress connectAddress,
+							   @Nullable String username,
+							   @Nullable Function<? super String, ? extends String> password) {
 		return proxy(type, connectAddress.isUnresolved() ?
 						() -> new InetSocketAddress(connectAddress.getHostName(),
 								connectAddress.getPort()) :
@@ -376,11 +364,10 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * The address to which this client should connect.
 	 *
 	 * @param connectAddress The address to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions proxy(@Nonnull Proxy type,
-			@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
+							   @Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
 		return proxy(type, connectAddress, null, null);
 	}
 
@@ -388,13 +375,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * The address to which this client should connect.
 	 *
 	 * @param connectAddress The address to connect to.
-	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions proxy(@Nonnull Proxy type,
-			@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
-			@Nullable String username,
-			@Nullable Function<? super String, ? extends String> password) {
+							   @Nonnull Supplier<? extends InetSocketAddress> connectAddress,
+							   @Nullable String username,
+							   @Nullable Function<? super String, ? extends String> password) {
 		this.proxyUsername = username;
 		this.proxyPassword = password;
 		this.proxyAddress = Objects.requireNonNull(connectAddress, "addressSupplier");
@@ -419,7 +405,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * {@link #sslContext(SslContext)}.
 	 *
 	 * @param configurator builder callback for further customization.
-	 *
 	 * @return this {@link ClientOptions}
 	 */
 	public ClientOptions sslSupport(Consumer<? super SslContextBuilder> configurator) {
@@ -428,8 +413,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 			SslContextBuilder builder = SslContextBuilder.forClient();
 			configurator.accept(builder);
 			return sslContext(builder.build());
-		}
-		catch (Exception sslException) {
+		} catch (Exception sslException) {
 			throw Exceptions.bubble(sslException);
 		}
 	}
@@ -473,12 +457,10 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		if (useDatagramChannel()) {
 			if (useNative) {
 				bootstrap.channel(loops.onDatagramChannel(elg));
-			}
-			else {
+			} else {
 				bootstrap.channelFactory(() -> new NioDatagramChannel(protocolFamily));
 			}
-		}
-		else {
+		} else {
 			bootstrap.channel(loops.onChannel(elg));
 		}
 	}

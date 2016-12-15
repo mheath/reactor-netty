@@ -17,6 +17,7 @@
 package reactor.ipc.netty.channel;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -132,7 +133,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
-			doPipeline(c.pipeline());
+			doPipeline(c);
 			c.pipeline()
 			 .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
 			if (c.isRegistered()) {
@@ -237,11 +238,14 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void doPipeline(ChannelPipeline pipeline) {
+	protected void doPipeline(Channel channel) {
+		InetSocketAddress remoteAddress = channel.remoteAddress() instanceof InetSocketAddress ? (InetSocketAddress)channel.remoteAddress() : null;
+		ChannelPipeline pipeline = channel.pipeline();
 		ClientContextHandler.addSslAndLogHandlers(clientOptions,
 				sink,
 				loggingHandler,
 				secure,
+				remoteAddress,
 				pipeline);
 		ClientContextHandler.addProxyHandler(clientOptions, pipeline);
 	}

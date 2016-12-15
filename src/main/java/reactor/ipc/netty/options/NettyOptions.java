@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.options;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -211,12 +212,18 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	 *
 	 * @return a new eventual {@link SslHandler}
 	 */
-	public final SslHandler getSslHandler(ByteBufAllocator allocator) {
+	public final SslHandler getSslHandler(ByteBufAllocator allocator, InetSocketAddress remoteAddress) {
 		if(sslContext == null){
 			return null;
 		}
 		Objects.requireNonNull(allocator, "allocator");
-		SslHandler sslHandler = sslContext.newHandler(allocator);
+
+		SslHandler sslHandler;
+		if (remoteAddress == null) {
+			sslHandler = sslContext.newHandler(allocator);
+		} else {
+			sslHandler = sslContext.newHandler(allocator, remoteAddress.getHostString(), remoteAddress.getPort());
+		}
 		sslHandler.setHandshakeTimeoutMillis(sslHandshakeTimeoutMillis);
 		return sslHandler;
 	}
